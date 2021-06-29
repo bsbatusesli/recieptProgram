@@ -11,20 +11,31 @@ class Bundle:
     def addPart(self, Part, quantity):
         itemCodes = []
 
-        # get all part codes
         for parts in self.connected_parts:
             itemCodes.append(parts[0].getPartNo())
         
         #check part no exist in the bundle
         if Part.getPartNo() in itemCodes:
-            #update quantity
             index = itemCodes.index(Part.getPartNo())
             self.connected_parts[index][1] += quantity 
         else:
             self.connected_parts.append([Part,quantity])
 
-    def removePart(self, Part):
-        self.connected_parts.remove(Part)
+    def removePart(self, Part, quantity):
+        for parts in self.connected_parts:
+            if parts[0] is Part:
+                if parts[1] > quantity:
+                    parts[1] -= quantity
+                    break
+                if parts[1] == quantity:
+                    self.connected_parts.remove(parts)
+                    break
+                if parts[1] < quantity:
+                    raise InsufficientQuantity
+
+
+
+       
 
     def print(self):
         for parts in self.connected_parts:
@@ -47,7 +58,6 @@ class Bundle:
         sum = 0
         for parts in self.connected_parts:
             sum = (parts[0].getPrice() * parts[1]) + sum
-
         self.total_price = sum
         return sum
 
@@ -61,7 +71,8 @@ class Bundle:
         self.connected_parts = []
         self.total_price = 0
         
-
+class InsufficientQuantity(Exception):
+    pass
 
 
 
