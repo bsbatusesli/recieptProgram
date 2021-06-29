@@ -65,6 +65,30 @@ def loadAllParts(filename, df):
     partListName = updatePartListName(partList)
 
 
+## Returns list contains itemCode and quantity
+def packBundle(bundle_toPack):
+    packed_bundle = []
+    for parts in bundle_toPack.connected_parts:
+        packed_bundle.append([parts[0].partNo, parts[1]])
+    return packed_bundle
+
+def unpackBundle(bundle_toUnpack):
+    partListCode = updatePartListCode(partList)
+    for part in bundle_toUnpack:
+        if part[0] in partListCode:
+            index = partListCode.index(part[0])
+            bundle.addPart(partList[index], part[1])
+        else:
+            product = createPart(part[0], df)
+            partList.append(product)
+            bundle.addPart(product)
+            del product
+
+## updates bundle table
+def updateBundleTable(window, bundle):
+    bundle_data = bundle.toDataFrame()
+    window['-BUNDLETABLE-'].update(values = bundle_data)
+    window['-TOTALPRICE2-'].update('Total Price: ' + str(round(bundle.calculateTotalPrice(), 2)) + ' €')
 
 ## Create the window
 def createWindow():
@@ -97,7 +121,7 @@ def createWindow():
                                     alternating_row_color='black',
                                     key='-BUNDLETABLE-',
                                     row_height=25)],
-                            [sg.Button("Go Main Page", key = '-EXITACTIVE-'),sg.Button("Create Excel File", key = '-CREATEEXCEL-'), sg.Button("Save Bundle", key = '-SAVEBUNDLE-')],[sg.Input(key = '-BUNDLE_PATH-' ), sg.FileBrowse("Browse"), sg.Button("Load Bundle", key = '-LOADBUNDLE-')], 
+                            [sg.Button("Go Main Page", key = '-EXITACTIVE-'),sg.Button("Create Excel File", key = '-CREATEEXCEL-'), sg.Button("Save Bundle", key = '-SAVEBUNDLE-'), sg.Button("Clear", key = '-CLEARBUNDLE-')],[sg.Input(key = '-BUNDLE_PATH-' ), sg.FileBrowse("Browse"), sg.Button("Load Bundle", key = '-LOADBUNDLE-')], 
                             [sg.Text('Total Price: ', key = '-TOTALPRICE2-', size = (50,1))]]
 
     layout = [[sg.Column(mainLayout, key='-MAIN-'), sg.Column(createPartLayout, visible=False, key='-PART-'),
@@ -118,6 +142,8 @@ def main():
     loadAllParts('saved_item_codes.pkl', df)
 
     window = createWindow()
+           
+
 
     while True:
 
@@ -141,9 +167,7 @@ def main():
         elif event == '-DISPLAY_BUNDLE-' :
             window['-MAIN-'].update(visible=False)
             window['-ACTIVEBUNDLE-'].update(visible=True)
-            bundle_data = bundle.toDataFrame()
-            window['-BUNDLETABLE-'].update(values = bundle_data)
-            window['-TOTALPRICE2-'].update('Total Price: ' + str(round(bundle.calculateTotalPrice(), 2)) + ' €')
+            updateBundleTable(window, bundle)
 
         elif event == '-EXITPART-' :
             window['-PART-'].update(visible=False)
@@ -200,21 +224,23 @@ def main():
         # save bundle
         if event == '-SAVEBUNDLE-':
             filename = sg.popup_get_text('Save Bundle\nEnter Bundle Name')
-            save_object(bundle, 'bundle_{}.pkl'.format(str(filename)))
-            bundle.print()
+            save_object(packBundle(bundle), 'bundle_{}.pkl'.format(str(filename)))
 
-        '''if event == '-LOADBUNDLE-':
+        if event == '-LOADBUNDLE-':
             bundle_path = str(values['-BUNDLE_PATH-']).split(sep = "/")
             file_name = bundle_path[len(bundle_path)-1]
-            print(file_name)
+            
             with open(file_name, 'rb') as input:
                 loaded_bundle = pickle.load(input)
-                print(loaded_bundle.toString())
-            print(loaded_bundle.toString())
-            bundle_data = loaded_bundle.toDataFrame()
-            window['-BUNDLETABLE-'].update(values = bundle_data)
-            window['-TOTALPRICE2-'].update('Total Price: ' + str(round(bundle.calculateTotalPrice(), 2)) + ' €')'''
+
+            bundle.clearBundle()
+            unpackBundle(loaded_bundle)
+            updateBundleTable(window, bundle)
             
+        if event == '-CLEARBUNDLE-':
+            bundle.clearBundle()
+            updateBundleTable(window, bundle)
+
 
         #------ INTERNAL BUTTON FUNCTIONS ENDS------------#
             
@@ -227,11 +253,11 @@ if __name__ == '__main__':
 
 
 ## TODO LIST:
-# Save bundle with name
 # excel name popup optimization . Cancel doesnt work
 # Added part classification
 # delete part
 # delete part from bundle
+# bundle adding 
 
 
 '''## ---------TEST OBJECTS ---------##

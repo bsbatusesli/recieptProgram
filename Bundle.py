@@ -51,8 +51,18 @@ class Bundle:
         self.total_price = sum
         return sum
 
-
+    def getConnectedParts(self):
+        return connected_parts
     
+    def getTotalPrice(self):
+        return total_price
+    
+    def clearBundle(self):
+        self.connected_parts = []
+        self.total_price = 0
+        
+
+
 
 
 
