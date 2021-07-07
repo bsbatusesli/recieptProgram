@@ -2,11 +2,23 @@ from Part import *
 
 class Bundle:
 
-    connected_parts = []
-    total_price = 0
 
     def __init__(self):
-        pass
+        self.connected_parts = []
+        self.total_price = 0
+        self.name = None
+
+    def __init__(self, name):
+        self.name = name
+        self.connected_parts = []
+        self.total_price = 0
+
+
+    def setName(self,name):
+        self.name = name
+
+    def getName(self):
+        return self.name
 
     def addPart(self, Part, quantity):
         itemCodes = []
@@ -26,16 +38,15 @@ class Bundle:
             if parts[0] is Part:
                 if parts[1] > quantity:
                     parts[1] -= quantity
-                    break
+                    return
                 if parts[1] == quantity:
                     self.connected_parts.remove(parts)
-                    break
+                    return
                 if parts[1] < quantity:
                     raise InsufficientQuantity
 
-
-
-       
+        ## if part is not in the connected part
+        raise PartDoesNotExist
 
     def print(self):
         for parts in self.connected_parts:
@@ -72,6 +83,9 @@ class Bundle:
         self.total_price = 0
         
 class InsufficientQuantity(Exception):
+    pass
+
+class PartDoesNotExist(Exception):
     pass
 
 
