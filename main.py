@@ -5,6 +5,8 @@ import pandas as pd
 import os
 import pickle
 
+class UnpicklingError(Exception):
+    pass
 
 ## get values from excel by looking at itemcode
 def createPart(itemCode, df):
@@ -51,6 +53,15 @@ def loadAllParts(filename, df):
 
     partListName = updatePartListName(partList)
 
+def checkFileFormat(filename, fileType):
+    try:
+        if filename.split('.')[1] == fileType:
+            return True
+        else:
+            return False
+    except:
+        return False
+
 
 ## Returns list contains itemCode and quantity
 def packBundle(bundle_toPack):
@@ -81,61 +92,70 @@ def unpackBundle(bundle_toUnpack, bundleName):
 def updateBundleTable(window, bundle):
     bundle_data = bundle.toDataFrame()
     window['-BUNDLETABLE-'].update(values = bundle_data)
-    window['-TOTALPRICE2-'].update('Total Price: ' + str(round(bundle.calculateTotalPrice(), 2)) + ' €')
+    return bundle_data
+
+## updates Reciept Table
+def updateRecieptTable(window, reciept):
+    reciept_data = []
+    for bundles in reciept:
+        reciept_data.append([bundles[0].getName(), '', bundles[1]])
+        reciept_data.extend(updateBundleTable(window, bundles[0]))
+    window['-RECIEPTTABLE-'].update(values = reciept_data)
+
+def calculateTotalPrice(reciept):
+    price = 0
+    for bundles in reciept:
+        price += bundles[0].calculateTotalPrice() * bundles[1]
+    return price
 
 ## Create the window
 def createWindow():
 
     
-    mainLayout =[           [sg.Button("Edit Parts", key = '-GO_PART-')],
-                            [sg.Button("Edit Bundle", key = '-GO_BUNDLE-')],
-                            [sg.Button("Display Current Bundle", key = '-DISPLAY_BUNDLE-')],
-                            [sg.Button("Exit")] ]
+    mainLayout =[           [sg.Button("Edit Parts", key = '-GO_PART-', size = (8,8), font = 'Arial 10 bold')],
+                            [sg.Button("Edit Bundle", key = '-GO_BUNDLE-', size = (8,8), font = 'Arial 10 bold')],
+                            [sg.Button("Edit Reciept", key = '-GO_RECIEPT-', size = (8,8), font = 'Arial 10 bold')],
+                            [sg.Button("Exit", size = (8,8), font = 'Arial 10 bold')] ]
 
-    createPartLayout = [    [sg.Text("Edit Parts")], 
+    editPartLayout = [    [sg.Text("Edit Parts")], 
                             [sg.Text('Enter Item Code: '), sg.InputText(key = '-ITEMCODE-')],
                             [sg.Button("Add", key = '-ADDPART-'),sg.Button("Remove", key = '-REMOVEPART-'), sg.Button("Cancel", key = '-EXITPART-')],
                             [sg.Text(size = (100,10), key = '-ConfirmationMessage-')]   ]
 
-    createBundleLayout =[  
+    editBundleLayout =[  
                             [sg.Text('Active Bundle:'),sg.Text(key = '-ACTIVE_BUNDLE_NAME-' , size = (10,1))],
                             [sg.Text('Change Active Bundle'),sg.Combo(values = [], key = '-ACTIVE_BUNDLE_LIST-', enable_events = True , size = (60,1)),sg.Button("Create New", key = '-CREATEBUNDLE-')],
                             [sg.Input(key = '-BUNDLE_PATH-' ), sg.FileBrowse("Browse", file_types = (('Pickle', '*.pkl'))), sg.Button("Load Bundle", key = '-LOADBUNDLE-')], 
-                            [sg.Listbox(values = partList, select_mode='extended', key='listbox', size=(100, 6))], 
+                            [sg.Listbox(values = partList, select_mode='extended', key='-PARTLIST-', size=(100, 6))], 
                             [sg.Text('Quantity: '), sg.InputText(key = '-ITEMQUANTITY-', size = (10,5))],
-                            [sg.Text('Total Price: ', key = '-TOTALPRICE-', size = (50,1))],
                             [sg.Button("Add", key = '-ADDBUNDLE-'),sg.Button("Remove", key = '-REMOVEBUNDLE-'),sg.Button("Go Main Page", key = '-EXITBUNDLE-')],
-                            [sg.Text(size = (100,10), key = '-Message-')] ]
+                            [sg.Text(size = (100,5), key = '-Message-')],
+                            [sg.Table(values = bundle_data, headings=bundle_headings, max_col_width=1000, background_color='black', auto_size_columns=True,
+                                        display_row_numbers=False, justification='left', num_rows=8, alternating_row_color='black', key='-BUNDLETABLE-', row_height=25)],
+                            [sg.Button("Save Bundle", key = '-SAVEBUNDLE-'), sg.Button("Clear", key = '-CLEARBUNDLE-'), sg.Text('Total Price: ', key = '-TOTALPRICE_BUNDLE-', size = (50,1), font = 'Arial 20 bold')]]
 
-    bundleLayout = [        
-                            [sg.Text('Active Bundle:'),sg.Text(key = '-ACTIVE_BUNDLE_NAME_2-', size = (10,1))],
-                            [sg.Table(values = bundle_data, headings=bundle_headings, max_col_width=1000,
-                                    background_color='black',
-                                    auto_size_columns=True,
-                                    display_row_numbers=False,
-                                    justification='left',
-                                    num_rows=8,
-                                    alternating_row_color='black',
-                                    key='-BUNDLETABLE-',
-                                    row_height=25)],
-                            [sg.Button("Create Excel File", key = '-CREATEEXCEL-'), sg.Button("Save Bundle", key = '-SAVEBUNDLE-'), sg.Button("Clear", key = '-CLEARBUNDLE-'),sg.Button("Go Main Page", key = '-EXITACTIVE-')],
-                            [sg.Text('Total Price: ', key = '-TOTALPRICE2-', size = (50,1))]]
+    recieptLayout = [       [sg.Listbox(values = bundleList, select_mode='extended', key='-BUNDLELIST-', size=(100, 6))], 
+                            [sg.Text('Quantity: '), sg.InputText(key = '-BUNDLEQUANTITY-', size = (10,5))],
+                            [sg.Button("Add", key = '-ADDRECIEPT-'),sg.Button("Remove", key = '-REMOVERECIEPT-')],
+                            [sg.Table(values = bundle_data, headings=bundle_headings, max_col_width=1000, background_color='black', auto_size_columns=True,
+                                      display_row_numbers=False, justification='left', num_rows=8, alternating_row_color='black', key='-RECIEPTTABLE-', row_height=25)],
+                            [sg.Button("Export Excel", key = '-CREATEEXCEL-'),sg.Button("Go Main Page", key = '-EXITACTIVE-'),sg.Text('Total Price: ', key = '-TOTALPRICE_RECIEPT-', size = (50,1), font = 'Arial 20 bold')]]
 
-    layout = [[sg.Column(mainLayout, key='-MAIN-'), sg.Column(createPartLayout, visible=False, key='-PART-'),
-            sg.Column(createBundleLayout, visible=False, key='-BUNDLE-'), sg.Column(bundleLayout,visible=False, key='-ACTIVEBUNDLE-')]]
+    layout = [[sg.Column(mainLayout, key='-MAIN-'), sg.Column(editPartLayout, visible=False, key='-PART-'),
+            sg.Column(editBundleLayout, visible=False, key='-BUNDLE-'), sg.Column(recieptLayout,visible=False, key='-RECIEPT-')]]
     
-    return sg.Window(title = 'Teklif Uygulaması', layout = layout, size = windowSize)
+    return sg.Window(title = 'SİSTAŞ PROJECT', layout = layout, size = windowSize)
 
 
 
 
 ## Popup function with custom layout. Return event and values
-def customPopup(title, popup_layout, text):
+def customPopup(title, popup_layout, text = None):
 
     if popup_layout == 'OK_CANCEL':
         window = sg.Window(title, layout = [   [sg.Input(key = '-TEXT-')],[sg.Button("OK", key = '-OK-'), sg.Button("Cancel", key = '-CANCEL-')]])
     if popup_layout == 'ERROR_MESSAGE':
-        window = sg.Window(title, layout = [   [sg.Text(text,key = '-TEXT-', size = (50,1))],[sg.Button("OK", key = '-OK-')]])
+        window = sg.Window(title, layout = [   [sg.Text(text, size = (50,1))],[sg.Button("OK", key = '-OK-')]])
     event, values = window.read()
     window.close()
     return event, values
@@ -160,28 +180,36 @@ def main():
         if event == sg.WINDOW_CLOSED:
             break
 
-        elif (event == 'Exit' or event == sg.WINDOW_CLOSE_ATTEMPTED_EVENT) and sg.popup_yes_no('Do you really want to exit?') == 'Yes':
-            partListCode = updatePartListCode(partList)
-            save_object(partListCode, 'saved_item_codes.pkl')
-            break
-
+        elif (event == 'Exit' or event == sg.WINDOW_CLOSE_ATTEMPTED_EVENT):
+            if sg.popup_yes_no('Do you want to save changes?') == 'Yes':
+                partListCode = updatePartListCode(partList)
+                save_object(partListCode, 'saved_item_codes.pkl')
+                for bundles in bundleList:
+                    save_object(packBundle(bundles), 'bundle_{}.pkl'.format(str(bundles.getName())))
+                break
+            else:
+                break
+            
         # ------ NAVIGATION FUNCTIONS ------ #
+
         elif event == '-GO_PART-' :
             window['-MAIN-'].update(visible=False)
             window['-PART-'].update(visible=True)
 
-        elif event == '-GO_BUNDLE-' :
+        elif event == '-GO_BUNDLE-' : 
             partListName = updatePartListName(partList)
             bundleListName = updateBundleListName(bundleList)
-            window.Element('listbox').update(values = partListName)
+            window.Element('-PARTLIST-').update(values = partListName)
             window.Element('-ACTIVE_BUNDLE_LIST-').update(values = bundleListName)
             window['-MAIN-'].update(visible=False)
             window['-BUNDLE-'].update(visible=True)
         
-        elif event == '-DISPLAY_BUNDLE-' :
+        elif event == '-GO_RECIEPT-' :
             window['-MAIN-'].update(visible=False)
-            window['-ACTIVEBUNDLE-'].update(visible=True)
-            updateBundleTable(window, bundleList[activeBundle])
+            window['-RECIEPT-'].update(visible=True)
+            bundleListName = updateBundleListName(bundleList)
+            window.Element('-BUNDLELIST-').update(values = bundleListName)
+            
 
         elif event == '-EXITPART-' :
             window['-PART-'].update(visible=False)
@@ -192,7 +220,7 @@ def main():
             window['-MAIN-'].update(visible=True)
 
         elif event == '-EXITACTIVE-' :
-            window['-ACTIVEBUNDLE-'].update(visible=False)
+            window['-RECIEPT-'].update(visible=False)
             window['-MAIN-'].update(visible=True)
 
         # ------ NAVIGATION FUNCTIONS ENDS ------ #
@@ -221,39 +249,33 @@ def main():
             else:
                 window['-ConfirmationMessage-'].update('Part is not found')
 
-        # Adding part to bundle
-        elif event == '-ADDBUNDLE-' :
+            
+        elif event == '-ADDBUNDLE-' or event == '-REMOVEBUNDLE-':
             try:
-                selection = values['listbox'][0]
+                selection = values['-PARTLIST-'][0]
                 quantity = int(values['-ITEMQUANTITY-'])
                 index = int(partListName.index(selection))
-                message_str = 'Added item: {}\n Quantity: {}'.format(selection,quantity)
 
                 if quantity > 0:
-                    window['-Message-'].update('ADDED ITEM\n' + message_str)
-                    bundleList[activeBundle].addPart(partList[index], quantity)
-                    window['-TOTALPRICE-'].update('Total Price: ' + str(round(bundleList[activeBundle].calculateTotalPrice(), 2)) + ' €')
-            except ValueError: 
-                customPopup('ERROR', 'ERROR_MESSAGE', 'Invalid Quantity Type')
-            except IndexError:
-                customPopup('ERROR', 'ERROR_MESSAGE', 'Selection Error. Please make sure select one of the item')
-            except UnboundLocalError:
-                customPopup('ERROR', 'ERROR_MESSAGE', 'Invalid Bundle Selection.')
-            except:
-                customPopup('ERROR', 'ERROR_MESSAGE', 'Upss! Try Again')
 
-        # Removing part from bundle
-        elif event == '-REMOVEBUNDLE-':
-            try:
-                selection = values['listbox'][0]
-                quantity = int(values['-ITEMQUANTITY-'])
-                index = int(partListName.index(selection))
-                message_str = 'Removed item: {}\n Quantity: {}'.format(selection,quantity)
+                    # Removing part from bundle
+                    if event == '-REMOVEBUNDLE-': 
+                        bundleList[activeBundle].removePart(partList[index], quantity)
+                        message_str = 'Removed item: {}\n Quantity: {}'.format(selection,quantity)
+                        window['-Message-'].update('REMOVED ITEM\n' + message_str)            
 
-                if quantity > 0:
-                    window['-Message-'].update('REMOVED ITEM\n' + message_str)
-                    bundleList[activeBundle].removePart(partList[index], quantity)
-                    window['-TOTALPRICE-'].update('Total Price: ' + str(round(bundleList[activeBundle].calculateTotalPrice(), 2)) + ' €')
+                    # Adding part to bundle
+                    elif event == '-ADDBUNDLE-':
+                        bundleList[activeBundle].addPart(partList[index], quantity)
+                        message_str = 'Added item: {}\n Quantity: {}'.format(selection,quantity)
+                        window['-Message-'].update('ADDED ITEM\n' + message_str)
+                        
+                    window['-TOTALPRICE_BUNDLE-'].update('Total Price: ' + str(round(bundleList[activeBundle].calculateTotalPrice(), 2)) + ' €')
+                    updateBundleTable(window, bundleList[activeBundle])
+
+                else:
+                    customPopup('ERROR', 'ERROR_MESSAGE', 'Quantity should be greater than zero')
+
             except InsufficientQuantity:
                 customPopup('ERROR', 'ERROR_MESSAGE', 'Insufficient Quantity for Removing')
             except PartDoesNotExist:
@@ -266,17 +288,16 @@ def main():
                 customPopup('ERROR', 'ERROR_MESSAGE', 'Invalid Bundle Selection.')
             except :
                 customPopup('ERROR', 'ERROR_MESSAGE', 'Upss! Try Again')
-            
 
         # create excel file
         elif event == '-CREATEEXCEL-':
-            popup_event, popup_values = customPopup('Create Excel','OK_CANCEL', None)
+            popup_event, popup_values = customPopup('Create Excel','OK_CANCEL')
             if popup_event == '-OK-' and popup_values['-TEXT-'] is not '':
                 pd.DataFrame(data = bundle_data, columns = bundle_headings).to_excel("{}.xlsx".format(str(popup_values['-TEXT-'])))
 
         # Save bundle
         elif event == '-SAVEBUNDLE-':
-            popup_event, popup_values = customPopup('Save Bundle','OK_CANCEL', None)
+            popup_event, popup_values = customPopup('Save Bundle','OK_CANCEL')
             if popup_event == '-OK-' and popup_values['-TEXT-'] is not '':
                 save_object(packBundle(bundleList[activeBundle]), 'bundle_{}.pkl'.format(str(popup_values['-TEXT-'])))
 
@@ -285,24 +306,23 @@ def main():
             bundle_path = str(values['-BUNDLE_PATH-']).split(sep = "/")
             file_name = bundle_path[len(bundle_path)-1]
             try:
+                if checkFileFormat(file_name, 'pkl'):
+                    with open(file_name, 'rb') as input:
+                        loaded_bundle = pickle.load(input)
 
-                with open(file_name, 'rb') as input:
-                    loaded_bundle = pickle.load(input)
+                    newBundleName = file_name.split('_')[1].split('.')[0] #get bundle name between _ and . : Saved file format bundle_<bundleName>.pkl
+                    unpackBundle(loaded_bundle,newBundleName)
 
-                newBundleName = file_name.split('_')[1].split('.')[0]
-                unpackBundle(loaded_bundle,newBundleName)
-
-                activeBundle = len(bundleList) - 1
-                updateBundleTable(window, bundleList[activeBundle])
-                bundleListName = updateBundleListName(bundleList)
-                window.Element('-ACTIVE_BUNDLE_LIST-').update(values = bundleListName)
-                window.Element('-ACTIVE_BUNDLE_NAME-').update(str(bundleList[activeBundle].getName()))
-                window.Element('-ACTIVE_BUNDLE_NAME_2-').update(str(bundleList[activeBundle].getName()))
+                    activeBundle = len(bundleList) - 1 # set active bundle to new bundle
+                    updateBundleTable(window, bundleList[activeBundle])
+                    bundleListName = updateBundleListName(bundleList)
+                    window.Element('-ACTIVE_BUNDLE_LIST-').update(values = bundleListName)
+                    window.Element('-ACTIVE_BUNDLE_NAME-').update(str(bundleList[activeBundle].getName()))
+                else :
+                    customPopup('ERROR', 'ERROR_MESSAGE', 'Invalid File Format. Just use pickle files(.pkl)')
 
             except FileNotFoundError:
                 customPopup('ERROR', 'ERROR_MESSAGE', 'File Not Found')
-            except UnpicklingError:
-                customPopup('ERROR', 'ERROR_MESSAGE', 'Invalid File Format. Just use pickle files(.PKL)')
             
         # Clear Bundle
         elif event == '-CLEARBUNDLE-':
@@ -311,34 +331,86 @@ def main():
 
         # Create New Bundle
         elif event == '-CREATEBUNDLE-':
-            popup_event, popup_values = customPopup('Create New Bundle','OK_CANCEL', None)
+            popup_event, popup_values = customPopup('Create New Bundle','OK_CANCEL')
             if popup_event == '-OK-' and popup_values['-TEXT-'] is not '':
                 bundleList.append(Bundle(str(popup_values['-TEXT-'])))
                 bundleListName = updateBundleListName(bundleList)
                 window.Element('-ACTIVE_BUNDLE_LIST-').update(values = bundleListName)
         
-        # Set Active Bundle
+        # Set Active Bundle in the Bundle Edit Menu
         elif event == '-ACTIVE_BUNDLE_LIST-':
             selection = values['-ACTIVE_BUNDLE_LIST-']
             activeBundle = int(bundleListName.index(selection))
             window.Element('-ACTIVE_BUNDLE_NAME-').update(str(bundleList[activeBundle].getName()))
-            window.Element('-ACTIVE_BUNDLE_NAME_2-').update(str(bundleList[activeBundle].getName()))
+            updateBundleTable(window, bundleList[activeBundle])
+
+
+        elif event == '-ADDRECIEPT-' or event == '-REMOVERECIEPT-':
+            try:
+                selection = values['-BUNDLELIST-'][0]
+                quantity = int(values['-BUNDLEQUANTITY-'])
+                index = int(bundleListName.index(selection))
+
+                if quantity > 0:
+
+                    # Removing bundle from reciept
+                    if event == '-REMOVERECIEPT-': 
+                        for bundles in reciept:
+                            if bundles[0] is bundleList[index]:
+
+                                if bundles[1] > quantity:
+                                    bundles[1] -= quantity
+
+                                elif bundles[1] == quantity:
+                                    reciept.remove(bundles)
+
+                                elif bundles[1] < quantity:
+                                    raise InsufficientQuantity
+                                 
+                    # Adding bundle to reciept
+                    elif event == '-ADDRECIEPT-':
+
+                        isExists = False
+                        for bundles in reciept:
+                            if bundles[0] is bundleList[index]:
+                                bundles[1] += quantity
+                                isExists = True
+                        
+                        if isExists == False:
+                            reciept.append([bundleList[index], quantity])
+                    
+                    updateRecieptTable(window, reciept)
+                    
+                    window['-TOTALPRICE_RECIEPT-'].update('Total Price: ' + str(round(calculateTotalPrice(reciept), 2)) + ' €')
+                            
+                else:
+                    customPopup('ERROR', 'ERROR_MESSAGE', 'Quantity should be greater than zero')
+
+            except InsufficientQuantity:
+                customPopup('ERROR', 'ERROR_MESSAGE', 'Insufficient Quantity for Removing')
+            except ValueError: 
+                customPopup('ERROR', 'ERROR_MESSAGE', 'Invalid Quantity Type')
+            except IndexError:
+                customPopup('ERROR', 'ERROR_MESSAGE', 'Selection Error. Please make sure select one of the item')
+            except :
+                customPopup('ERROR', 'ERROR_MESSAGE', 'Upss! Try Again')
+            
 
         #------ INTERNAL BUTTON FUNCTIONS ENDS------------#
             
     window.close()
 
 if __name__ == '__main__':
-    windowSize = (1000 ,600)
+    windowSize = (700 ,600)
 
     partList = [] ## Stores active parts added on the stack
-    bundle = Bundle("Default") ## Active Bundle Object 
     bundleList = [] ## Stores bundles
-    bundleList.append(bundle)
+    reciept = [] ## Final reciept contains bundles.
 
     # Table Data
     bundle_data = [['None', 'None', 'None']]
     bundle_headings = ["\t\t       Short Description       \t\t\t\t\t\t\t\t\t", "Price\t\t\t\t", 'Quantity'] # \₺ for expanding the table(using auto_size).
+    reciept_data = [['None', 'None', 'None']]
 
     
     main()
@@ -347,6 +419,6 @@ if __name__ == '__main__':
 
 ## TODO LIST:
 # Added part classification
-# load and save bundle
-# Creating reciept including multiple bundle
+
+
 
