@@ -101,6 +101,7 @@ def updateRecieptTable(window, reciept):
         reciept_data.append([bundles[0].getName(), '', bundles[1]])
         reciept_data.extend(updateBundleTable(window, bundles[0]))
     window['-RECIEPTTABLE-'].update(values = reciept_data)
+    return reciept_data
 
 def calculateTotalPrice(reciept):
     price = 0
@@ -112,31 +113,39 @@ def calculateTotalPrice(reciept):
 def createWindow():
 
     
-    mainLayout =[           [sg.Button("Edit Parts", key = '-GO_PART-', size = (8,8), font = 'Arial 10 bold')],
-                            [sg.Button("Edit Bundle", key = '-GO_BUNDLE-', size = (8,8), font = 'Arial 10 bold')],
-                            [sg.Button("Edit Reciept", key = '-GO_RECIEPT-', size = (8,8), font = 'Arial 10 bold')],
-                            [sg.Button("Exit", size = (8,8), font = 'Arial 10 bold')] ]
+    mainLayout =[           [sg.Button("Edit Parts", key = '-GO_PART-', size = (12,8), font = 'Arial 10 bold')],
+                            [sg.Button("Edit Bundle", key = '-GO_BUNDLE-', size = (12,8), font = 'Arial 10 bold')],
+                            [sg.Button("Edit Reciept", key = '-GO_RECIEPT-', size = (12,8), font = 'Arial 10 bold')],
+                            [sg.Button("Exit", size = (12,8), font = 'Arial 10 bold')] ]
 
-    editPartLayout = [    [sg.Text("Edit Parts")], 
-                            [sg.Text('Enter Item Code: '), sg.InputText(key = '-ITEMCODE-')],
-                            [sg.Button("Add", key = '-ADDPART-'),sg.Button("Remove", key = '-REMOVEPART-'), sg.Button("Cancel", key = '-EXITPART-')],
+    editPartLayout = [      [sg.Text("Edit Parts",font = 'Arial 20 bold')], 
+                            [sg.Text('Enter Item Code: '), sg.InputText(key = '-ITEMCODE-'), sg.Button('Search', key = '-SEARCHPART-')],
+                            [sg.Text('Part: '), sg.Text(key = '-SEARCHEDPART-', size = (40,1))],
+                            [sg.Text(key = '-IN1_T-', visible = False, size = (20,1), justification = 'center'),sg.InputText(key = '-IN1-', visible = False, size = (10,1))],
+                            [sg.Text(key = '-IN2_T-', visible = False, size = (20,1), justification = 'center'),sg.InputText(key = '-IN2-', visible = False, size = (10,1))], 
+                            [sg.Text(key = '-IN3_T-', visible = False, size = (20,1), justification = 'center'),sg.InputText(key = '-IN3-', visible = False, size = (10,1))],
+                            [sg.Button("Add", key = '-ADDPART-'),sg.Button("Remove", key = '-REMOVEPART-'), sg.Button("Go Main Page", key = '-EXITPART-')],
                             [sg.Text(size = (100,10), key = '-ConfirmationMessage-')]   ]
 
-    editBundleLayout =[  
-                            [sg.Text('Active Bundle:'),sg.Text(key = '-ACTIVE_BUNDLE_NAME-' , size = (10,1))],
-                            [sg.Text('Change Active Bundle'),sg.Combo(values = [], key = '-ACTIVE_BUNDLE_LIST-', enable_events = True , size = (60,1)),sg.Button("Create New", key = '-CREATEBUNDLE-')],
-                            [sg.Input(key = '-BUNDLE_PATH-' ), sg.FileBrowse("Browse", file_types = (('Pickle', '*.pkl'))), sg.Button("Load Bundle", key = '-LOADBUNDLE-')], 
+    editBundleLayout =[
+                            [sg.Text('Change Active Bundle', size = (20,1)),sg.Combo(values = [], key = '-ACTIVE_BUNDLE_LIST-', enable_events = True , size = (50,1)),sg.Button("Create New", key = '-CREATEBUNDLE-')],
+                            [sg.Text('Bundle Path: ', size = (20,1)),sg.Input(key = '-BUNDLE_PATH-' , size = (52,1)), sg.FileBrowse("Browse", file_types = (('Pickle', '*.pkl'))), sg.Button("Load Bundle", key = '-LOADBUNDLE-')],
+                            [sg.Text('Select Part')], 
                             [sg.Listbox(values = partList, select_mode='extended', key='-PARTLIST-', size=(100, 6))], 
                             [sg.Text('Quantity: '), sg.InputText(key = '-ITEMQUANTITY-', size = (10,5))],
-                            [sg.Button("Add", key = '-ADDBUNDLE-'),sg.Button("Remove", key = '-REMOVEBUNDLE-'),sg.Button("Go Main Page", key = '-EXITBUNDLE-')],
+                            [sg.Button("Add", key = '-ADDBUNDLE-'),sg.Button("Remove", key = '-REMOVEBUNDLE-')],
                             [sg.Text(size = (100,5), key = '-Message-')],
+                            [sg.Text('Active Bundle:', font = 'Arial 15'),sg.Text(key = '-ACTIVE_BUNDLE_NAME-' , size = (10,1), font = 'Arial 15')],
                             [sg.Table(values = bundle_data, headings=bundle_headings, max_col_width=1000, background_color='black', auto_size_columns=True,
                                         display_row_numbers=False, justification='left', num_rows=8, alternating_row_color='black', key='-BUNDLETABLE-', row_height=25)],
-                            [sg.Button("Save Bundle", key = '-SAVEBUNDLE-'), sg.Button("Clear", key = '-CLEARBUNDLE-'), sg.Text('Total Price: ', key = '-TOTALPRICE_BUNDLE-', size = (50,1), font = 'Arial 20 bold')]]
+                            [sg.Button("Save Bundle", key = '-SAVEBUNDLE-'), sg.Button("Clear", key = '-CLEARBUNDLE-'),sg.Button('Go Reciept Page',key = '-GO_RECIEPT_PAGE-') ,sg.Button("Go Main Page", key = '-EXITBUNDLE-'), sg.Text('Total Price: ', key = '-TOTALPRICE_BUNDLE-', size = (50,1), font = 'Arial 20 bold')]]
 
-    recieptLayout = [       [sg.Listbox(values = bundleList, select_mode='extended', key='-BUNDLELIST-', size=(100, 6))], 
+    recieptLayout = [       [sg.Text('BUNDLES', font = 'Arial 20 bold')], 
+                            [sg.Listbox(values = bundleList, select_mode='extended', key='-BUNDLELIST-', size=(100, 6))], 
                             [sg.Text('Quantity: '), sg.InputText(key = '-BUNDLEQUANTITY-', size = (10,5))],
                             [sg.Button("Add", key = '-ADDRECIEPT-'),sg.Button("Remove", key = '-REMOVERECIEPT-')],
+                            [sg.Text('')], 
+                            [sg.Text('RECIEPT', font = 'Arial 20 bold')], 
                             [sg.Table(values = bundle_data, headings=bundle_headings, max_col_width=1000, background_color='black', auto_size_columns=True,
                                       display_row_numbers=False, justification='left', num_rows=8, alternating_row_color='black', key='-RECIEPTTABLE-', row_height=25)],
                             [sg.Button("Export Excel", key = '-CREATEEXCEL-'),sg.Button("Go Main Page", key = '-EXITACTIVE-'),sg.Text('Total Price: ', key = '-TOTALPRICE_RECIEPT-', size = (50,1), font = 'Arial 20 bold')]]
@@ -144,7 +153,7 @@ def createWindow():
     layout = [[sg.Column(mainLayout, key='-MAIN-'), sg.Column(editPartLayout, visible=False, key='-PART-'),
             sg.Column(editBundleLayout, visible=False, key='-BUNDLE-'), sg.Column(recieptLayout,visible=False, key='-RECIEPT-')]]
     
-    return sg.Window(title = 'SİSTAŞ PROJECT', layout = layout, size = windowSize)
+    return sg.Window(title = 'SİSTAŞ PROJECT', layout = layout, size = windowSize, element_justification='c')
 
 
 
@@ -195,6 +204,13 @@ def main():
         elif event == '-GO_PART-' :
             window['-MAIN-'].update(visible=False)
             window['-PART-'].update(visible=True)
+            window['-IN1-'].update(visible = False)
+            window['-IN1_T-'].update(visible = False)
+            window['-IN2-'].update(visible = False)
+            window['-IN2_T-'].update(visible = False)
+            window['-IN3-'].update(visible = False)
+            window['-IN3_T-'].update(visible = False)
+            window['-SEARCHEDPART-'].update('')
 
         elif event == '-GO_BUNDLE-' : 
             partListName = updatePartListName(partList)
@@ -209,8 +225,13 @@ def main():
             window['-RECIEPT-'].update(visible=True)
             bundleListName = updateBundleListName(bundleList)
             window.Element('-BUNDLELIST-').update(values = bundleListName)
-            
 
+        elif event == '-GO_RECIEPT_PAGE-':
+            window['-BUNDLE-'].update(visible=False)
+            window['-RECIEPT-'].update(visible=True)
+            bundleListName = updateBundleListName(bundleList)
+            window.Element('-BUNDLELIST-').update(values = bundleListName)
+            
         elif event == '-EXITPART-' :
             window['-PART-'].update(visible=False)
             window['-MAIN-'].update(visible=True)
@@ -226,6 +247,20 @@ def main():
         # ------ NAVIGATION FUNCTIONS ENDS ------ #
 
         #------ INTERNAL BUTTON FUNCTIONS ------------#
+        #Search the Part
+        elif event == '-SEARCHPART-':
+
+            searchedPart = df.loc[values['-ITEMCODE-']]['Short Description']
+            window['-SEARCHEDPART-'].update(searchedPart)
+
+            if searchedPart.startswith('SYS'):
+                window['-IN1_T-'].update('Number of Port: ',visible = True)
+                window['-IN1-'].update(visible = True)
+                window['-IN2_T-'].update('Number of Uplink: ',visible = True)
+                window['-IN2-'].update(visible = True)
+
+
+
         #Adding the part 
         elif event == "-ADDPART-" :
 
@@ -236,9 +271,9 @@ def main():
                     partList.append(product)
                     partListName = updatePartListName(partList)
                 except:
-                    window['-ConfirmationMessage-'].update('Part could not found!')
+                    customPopup('ERROR', 'ERROR_MESSAGE', 'Part could not found!')
             else :
-                window['-ConfirmationMessage-'].update('Part is already added! ')
+                customPopup('ERROR', 'ERROR_MESSAGE', 'Part is already added! ')
         
         #Removing part from Part List
         elif event == '-REMOVEPART-':
@@ -246,8 +281,9 @@ def main():
                 for part in partList:
                     if part.getPartNo() == values['-ITEMCODE-']:
                         partList.remove(part)
+                        window['-ConfirmationMessage-'].update('REMOVED ITEM\n' + part.toString())
             else:
-                window['-ConfirmationMessage-'].update('Part is not found')
+                customPopup('ERROR', 'ERROR_MESSAGE', 'Part is not found')
 
             
         elif event == '-ADDBUNDLE-' or event == '-REMOVEBUNDLE-':
@@ -293,7 +329,9 @@ def main():
         elif event == '-CREATEEXCEL-':
             popup_event, popup_values = customPopup('Create Excel','OK_CANCEL')
             if popup_event == '-OK-' and popup_values['-TEXT-'] is not '':
-                pd.DataFrame(data = bundle_data, columns = bundle_headings).to_excel("{}.xlsx".format(str(popup_values['-TEXT-'])))
+                reciept_data.append(['','',''])
+                reciept_data.append(['', 'TOTAL PRICE', round(calculateTotalPrice(reciept), 2)])
+                pd.DataFrame(data = reciept_data, columns = bundle_headings).to_excel("{}.xlsx".format(str(popup_values['-TEXT-'])))
 
         # Save bundle
         elif event == '-SAVEBUNDLE-':
@@ -328,6 +366,7 @@ def main():
         elif event == '-CLEARBUNDLE-':
             bundleList[activeBundle].clearBundle()
             updateBundleTable(window, bundleList[activeBundle])
+            window['-TOTALPRICE_BUNDLE-'].update('Total Price: ' + str(round(bundleList[activeBundle].calculateTotalPrice(), 2)) + ' €')
 
         # Create New Bundle
         elif event == '-CREATEBUNDLE-':
@@ -336,6 +375,9 @@ def main():
                 bundleList.append(Bundle(str(popup_values['-TEXT-'])))
                 bundleListName = updateBundleListName(bundleList)
                 window.Element('-ACTIVE_BUNDLE_LIST-').update(values = bundleListName)
+                activeBundle = len(bundleList) - 1
+                window.Element('-ACTIVE_BUNDLE_NAME-').update(str(bundleList[activeBundle].getName()))
+
         
         # Set Active Bundle in the Bundle Edit Menu
         elif event == '-ACTIVE_BUNDLE_LIST-':
@@ -379,7 +421,7 @@ def main():
                         if isExists == False:
                             reciept.append([bundleList[index], quantity])
                     
-                    updateRecieptTable(window, reciept)
+                    reciept_data = updateRecieptTable(window, reciept)
                     
                     window['-TOTALPRICE_RECIEPT-'].update('Total Price: ' + str(round(calculateTotalPrice(reciept), 2)) + ' €')
                             
