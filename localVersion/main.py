@@ -220,29 +220,19 @@ def main():
             window['-MAIN-'].update(visible=False)
             window['-BUNDLE-'].update(visible=True)
         
-        elif event == '-GO_RECIEPT-' :
+        elif event == '-GO_RECIEPT-' or event == '-GO_RECIEPT_PAGE-':
             window['-MAIN-'].update(visible=False)
-            window['-RECIEPT-'].update(visible=True)
-            bundleListName = updateBundleListName(bundleList)
-            window.Element('-BUNDLELIST-').update(values = bundleListName)
-
-        elif event == '-GO_RECIEPT_PAGE-':
             window['-BUNDLE-'].update(visible=False)
             window['-RECIEPT-'].update(visible=True)
             bundleListName = updateBundleListName(bundleList)
             window.Element('-BUNDLELIST-').update(values = bundleListName)
             
-        elif event == '-EXITPART-' :
+        elif event == '-EXITPART-' or event == '-EXITBUNDLE-' or event == '-EXITACTIVE-' :
             window['-PART-'].update(visible=False)
-            window['-MAIN-'].update(visible=True)
-
-        elif event == '-EXITBUNDLE-' :
             window['-BUNDLE-'].update(visible=False)
-            window['-MAIN-'].update(visible=True)
-
-        elif event == '-EXITACTIVE-' :
             window['-RECIEPT-'].update(visible=False)
             window['-MAIN-'].update(visible=True)
+
 
         # ------ NAVIGATION FUNCTIONS ENDS ------ #
 
