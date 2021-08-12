@@ -93,6 +93,22 @@ class db():
 
         except Error as e:
             print("Error while getting data", e)
+
+    def getAllItemsInBundle(self, _bid):
+        try:
+            connection = self.get_connection()
+            cursor = connection.cursor()
+            select_query = """SELECT iid FROM bundle_items WHERE bid = %s"""
+            cursor.execute(select_query, (_bid, ))
+            records = cursor.fetchall()
+            self.close_connection(connection)
+            return records
+
+        except Error as e:
+            print("Error while getting data", e)
+
+    def tryy(self):
+        pass
     
     def getAllBundleNames(self):
         try:
@@ -125,13 +141,13 @@ class db():
         except Error as e:
             print("Error while getting data", e)
 
-    def getPartInfo(self):
+    def getPartInfo(self, _itemCode):
         try:
             connection = self.get_connection()
             cursor = connection.cursor()
             select_query = """  SELECT * FROM saved_items 
                                 WHERE itemCode = %s"""
-            cursor.execute(select_query, (itemCode,))
+            cursor.execute(select_query, (_itemCode,))
             records = cursor.fetchall()
             self.close_connection(connection)
             return records
@@ -247,6 +263,17 @@ class db():
             connection = self.get_connection()
             cursor = connection.cursor()
             parts = _bundle.getConnectedParts()
+            existingParts = self.getAllItemsInBundle(_bid)
+            indexes = []
+            for part in parts:
+                indexes.append(_partList.index(part[0]))
+
+            for part in existingParts:
+                if not part[0] in indexes:
+                    delete_query = """  DELETE FROM bundle_items WHERE iid = %s AND bid = %s """
+                    cursor.execute(delete_query, (part[0], _bid,))
+                    connection.commit()
+
             for part in parts:
                 index = _partList.index(part[0])
                 if self.isPartExistsInBundle(_bid,index):
