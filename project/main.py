@@ -146,7 +146,7 @@ def packBundle(bundle_toPack):
         packed_bundle.append([parts[0].partNo, parts[1]])
     return packed_bundle
 
-def unpackBundle(bundle_toUnpack, bundleName):
+def unpackBundle(bundle_toUnpack, bundleName, _df):
 
     bundleList.append(Bundle(bundleName))
     bundleListName = updateBundleListName(bundleList)
@@ -157,8 +157,7 @@ def unpackBundle(bundle_toUnpack, bundleName):
             index = partListCode.index(part[0])
             bundleList[bundleIndex].addPart(partList[index], part[1])
         else:
-            ## TODO: Test it
-            product = createPart(part[0], df)
+            product = createPart(part[0], _df)
             partList.append(product)
             bundleList[bundleIndex].addPart(product)
             del product
@@ -200,7 +199,6 @@ def processOffer(values, reciept, reciept_data):
 
 
 def main():
-
     # ----------- Reading Data From Excel ----------- #
     data = pd.read_excel(r'/Users/batuhansesli/Documents/SİSTAŞ STAJ/Product Catalogue_IP Routing_112020.xlsm', sheet_name = 'PPL', usecols = "C,E,F,K", header = 7)
     df = pd.DataFrame(data, columns = ['Item Code', 'Short Description', 'Long Description', 'Product Market Price in EUR'])
@@ -223,8 +221,9 @@ def main():
             if popup_event[0] == '-OK-':
                 savePartsToDB(db_connection)
                 saveBundlesToDB(db_connection)
+                break
             else:
-                pass
+                break
             
         # ------ NAVIGATION FUNCTIONS ------ #
         
@@ -289,15 +288,17 @@ def main():
         #------ INTERNAL BUTTON FUNCTIONS ------------#
         #Search the Part
         elif event == '-SEARCHPART-':
+            try:
+                searchedPart = df.loc[values['-ITEMCODE-']]['Long Description']
+                window['-SEARCHEDPART-'].update(searchedPart)
 
-            searchedPart = df.loc[values['-ITEMCODE-']]['Short Description']
-            window['-SEARCHEDPART-'].update(searchedPart)
-
-            if searchedPart.startswith('SYS'):
-                window['-IN1_T-'].update('Number of Port: ',visible = False)
-                window['-IN1-'].update(visible = False)
-                window['-IN2_T-'].update('Number of Uplink: ',visible = False)
-                window['-IN2-'].update(visible = False)
+                if searchedPart.startswith('SYS'):
+                    window['-IN1_T-'].update('Number of Port: ',visible = True)
+                    window['-IN1-'].update(visible = True)
+                    window['-IN2_T-'].update('Number of Uplink: ',visible = True)
+                    window['-IN2-'].update(visible = True)
+            except KeyError:
+                customPopup('ERROR', 'ERROR_MESSAGE', 'Part Could not Found')
 
 
 
@@ -416,7 +417,7 @@ def main():
             try:
                 selection = values['-BUNDLELIST-'][0]
                 quantity = int(values['-BUNDLEQUANTITY-'])
-                index = int(bundleListName.index(selection))
+                index = int(bundleListName.index(selection)) + 1
 
                 if quantity > 0:
 
@@ -472,14 +473,6 @@ if __name__ == '__main__':
     main()
 
 
-
-
-# TODO:Added part classification
-#TODO: save all parts and bundles until 
-# now if different 
-# update 
-# else 
-# k 
 
 #TODO: get requirements and setup.py create setup.py
 
